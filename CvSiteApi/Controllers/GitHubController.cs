@@ -8,77 +8,58 @@ namespace CvSiteApi.Controllers
     [Route("api/[controller]")]
     public class GitHubController : ControllerBase
     {
-        private readonly GitHubService _gitHubService;
+        private readonly IGitHubService _gitHubService;
+        private readonly ILogger<GitHubController> _logger;
 
-        /// <summary>
-        /// Constructor - מקבל את GitHubService דרך Dependency Injection
-        /// .NET אוטומטית מזריקה אותו בשביל אנו
-        /// </summary>
-        public GitHubController(GitHubService gitHubService)
+        public GitHubController(
+            IGitHubService gitHubService,
+            ILogger<GitHubController> logger)
         {
             _gitHubService = gitHubService;
+            _logger = logger;
         }
 
-        /// <summary>
-        /// GET /api/github/portfolio
-        /// מחזיר את כל הריפוזיטוריז שלך עם מידע מלא
-        /// </summary>
         [HttpGet("portfolio")]
-        public async Task<ActionResult<List<PortfolioRepositoryDto>>> GetPortfolio()
+        public async Task<ActionResult<IReadOnlyList<PortfolioRepositoryDto>>> GetPortfolio()
         {
             try
             {
                 var portfolio = await _gitHubService.GetPortfolioAsync();
-
-                if (portfolio == null || portfolio.Count == 0)
-                {
-                    return NotFound("No repositories found");
-                }
-
                 return Ok(portfolio);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = ex.Message });
+                _logger.LogError(ex, "Failed to load the GitHub portfolio.");
+                return Problem(
+                    statusCode: StatusCodes.Status502BadGateway,
+                    title: "GitHub is temporarily unavailable.");
             }
         }
 
-        /// <summary>
-        /// GET /api/github/search
-        /// חיפוש ציבורי ב-GitHub
-        /// פרמטרים אופציונליים:
-        /// - name: שם Repository (לדוגמה: "angular")
-        /// - language: שפת פיתוח (לדוגמה: "CSharp", "JavaScript")
-        /// - user: שם משתמש (לדוגמה: "microsoft")
-        /// </summary>
         [HttpGet("search")]
-        public async Task<ActionResult<List<SearchResultDto>>> SearchRepositories(
+        public async Task<ActionResult<IReadOnlyList<SearchResultDto>>> SearchRepositories(
             [FromQuery] string? name = null,
             [FromQuery] string? language = null,
             [FromQuery] string? user = null)
         {
+            if (string.IsNullOrWhiteSpace(name) &&
+                string.IsNullOrWhiteSpace(language) &&
+                string.IsNullOrWhiteSpace(user))
+            {
+                return BadRequest("Provide at least one search parameter: name, language, or user.");
+            }
+
             try
             {
-                // בדוק שלפחות פרמטר אחד נשלח
-                if (string.IsNullOrWhiteSpace(name) && 
-                    string.IsNullOrWhiteSpace(language) && 
-                    string.IsNullOrWhiteSpace(user))
-                {
-                    return BadRequest("Please provide at least one search parameter (name, language, or user)");
-                }
-
                 var results = await _gitHubService.SearchRepositoriesAsync(name, language, user);
-
-                if (results == null || results.Count == 0)
-                {
-                    return NotFound("No repositories found matching your criteria");
-                }
-
                 return Ok(results);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = ex.Message });
+                _logger.LogError(ex, "Failed to search GitHub repositories.");
+                return Problem(
+                    statusCode: StatusCodes.Status502BadGateway,
+                    title: "GitHub is temporarily unavailable.");
             }
         }
     }

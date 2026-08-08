@@ -9,12 +9,16 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthorization();
 
-// Configure GitHub Options from User Secrets / appsettings
-builder.Services.Configure<GitHubOptions>(
-    builder.Configuration.GetSection("GitHub"));
+builder.Services
+    .AddOptions<GitHubOptions>()
+    .Bind(builder.Configuration.GetSection(GitHubOptions.SectionName))
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.UserName),
+        "GitHub:UserName is required.")
+    .ValidateOnStart();
 
-// Register GitHubService
-builder.Services.AddSingleton<GitHubService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IGitHubService, GitHubService>();
 
 var app = builder.Build();
 
