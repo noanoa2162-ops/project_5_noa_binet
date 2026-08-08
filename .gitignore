@@ -5,13 +5,18 @@ obj/
 *.exe
 *.pdb
 
+# Test output
+TestResults/
+coverage/
+
 # Visual Studio
 .vs/
 .vscode/
 *.user
+*.suo
 *.sln.iml
 
-# User Secrets (NEVER commit!)
+# User Secrets (never commit)
 secrets.json
 .user-secrets/
 

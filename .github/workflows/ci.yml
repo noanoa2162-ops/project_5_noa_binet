@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.423
+
+      - name: Restore dependencies
+        run: dotnet restore tests/CvSiteApi.Tests/CvSiteApi.Tests.csproj
+
+      - name: Build
+        run: dotnet build tests/CvSiteApi.Tests/CvSiteApi.Tests.csproj --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test tests/CvSiteApi.Tests/CvSiteApi.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Publish API
+        run: dotnet publish CvSiteApi/CvSiteApi.csproj --configuration Release --no-restore --output ./publish
